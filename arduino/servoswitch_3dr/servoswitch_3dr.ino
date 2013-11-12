@@ -4,12 +4,15 @@
  * Alternative firmware for the 3D Robotics servoswitch:
  * http://store.3drobotics.com/products/servoswitch-v10-kit
  *
- * This firmware makes it possible to use a 3 position switch on the transmitter.
+ * This firmware makes it possible to use a 3 position switch on an r/c 
+ * transmitter (or use a servo output channel on AMP combined with DO_SERVO 
+ * or CAM_TRIGG_DIST).
+ *
  * depending on the position of the r/c channel, pulses are sent over a USB 
  * cable to a canon camera. 
- *    pos 0 (< 1333 ns): no action
- *    pos 1 (> 1333 && < 1666ns): camera shutter, 100ms pulse
- *    pos 2 (> 1666ns): camera off, 1000ms pulse
+ *    pos 0 (< 1333 ns):           no action
+ *    pos 1 (> 1333 && < 1666ns):  camera shutter, 100ms pulse
+ *    pos 2 (> 1666ns):            camera off, 1000ms pulse
  *
  * This program is made to be used with ATtiny45/85. It is programmed by a lazy
  * programmer, sending impulses is blocking. I couldn't be arsed to use 
@@ -18,13 +21,15 @@
  * (c) 2013, Simon Wunderlin <swunderlin@gmail.com>
  */
 
-// pin setup
+// pin layout (attiny45)
 #define PIN_CAM 1
 #define PIN_PPM 2
 #define PIN_LED 3
 
-#define PULSE_TRIGGER   250
+#define PULSE_TRIGGER   100
 #define PULSE_SHUTDOWN 1000
+#define MIN_GOOD_FRAMES  15
+#define PPM_TIMEOUT   20000 
 
 unsigned long duration, lastgood = 0;
 uint8_t switch_pos, good_frames, last_switch_pos = 0;
@@ -32,7 +37,7 @@ uint8_t switch_pos, good_frames, last_switch_pos = 0;
 void setup() {
 	pinMode(PIN_CAM, OUTPUT);
 	digitalWrite(PIN_CAM, LOW);
-	delay(5000); // make sure the pin is low
+	delay(200); // make sure the pin is low
 	
 	pinMode(PIN_LED, OUTPUT);
 	digitalWrite(PIN_LED, LOW);
@@ -60,7 +65,7 @@ void loop() {
 	 * the length of the pulse (in microseconds) or 0 if no pulse 
 	 * started before the timeout (unsigned long)
 	 */
-	duration = pulseIn(PIN_PPM, HIGH, 20000); 
+	duration = pulseIn(PIN_PPM, HIGH, PPM_TIMEOUT); 
 	if (duration == 0) { // no ppm signal
 		duration = lastgood;
 		good_frames = 0;
@@ -71,7 +76,7 @@ void loop() {
 	
 	// check if we subsequently got 10 good frames, otherwise skip actions.
 	// this tries to deal with noisy radios
-	if (good_frames < 15)
+	if (good_frames < MIN_GOOD_FRAMES)
 		return;
 	
 	// map ppm input values to switch states (0-2)
@@ -82,37 +87,27 @@ void loop() {
 	else if (lastgood > 1333) switch_pos = 1;
 	else switch_pos = 0;
 	
-	// decide what to do with the pulse we have
+	// if the position has changed, decide what to do 
 	if (switch_pos != last_switch_pos) {
 		switch (switch_pos) {
-			case 0: // no action
+			case 0: // no action / off
 				digitalWrite(PIN_LED, LOW); // turn off the lights
 				digitalWrite(PIN_CAM, LOW); // no signal or off
 				break;
 			
-			case 1: // send trigger pulse
+			case 1: // middle position, short pulse, trigger
 				send_pulse(PULSE_TRIGGER);
 				break;
 			
-			case 2:
+			case 2: // max position, long pulse, shut down
 				send_pulse(PULSE_SHUTDOWN);
 				break;
 		}
 		
-		last_switch_pos = switch_pos;
+		last_switch_pos = switch_pos; // remeber last position
 	}
 	
+	// reset good frames counter, try to capture MIN_GOOD_FRAMES good frames again
 	good_frames = 0;
-	
-	/*
-	// if ppm_in is high and cam_state is low, turn the camera on
-	if (ppm_in && !cam_state) {
-		digitalWrite(PIN_CAM_PWR_BTN, HIGH);
-		delay(500);
-		digitalWrite(PIN_CAM_PWR_BTN, LOW);
-		delay(500);
-	}
-	*/
-	
 }
 
