@@ -44,6 +44,7 @@ void setup() {
 	
 	pinMode(PIN_PPM, INPUT);
 }
+
 /**
  * Toggle switch for N milliseconds
  *
@@ -83,9 +84,9 @@ void loop() {
 	//  0: no signal
 	//  1: trigger camera
 	//  2: shut down cam
-	if (lastgood > 1666) switch_pos = 2;
+	if      (lastgood > 1666) switch_pos = 2;
 	else if (lastgood > 1333) switch_pos = 1;
-	else switch_pos = 0;
+	else                      switch_pos = 0;
 	
 	// if the position has changed, decide what to do 
 	if (switch_pos != last_switch_pos) {
