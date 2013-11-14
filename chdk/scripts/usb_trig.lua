@@ -1,7 +1,11 @@
 --[[
-@title CD USB cmaera trigger
+-- @title CD USB camera trigger
 
 FIXME: description 
+
+read:
+http://chdk.wikia.com/wiki/USB_Remote_Cable
+http://chdk.wikia.com/wiki/USB_Remote_V2#Scripting_Interface
 --]]
 
 treshold = 500
@@ -9,14 +13,15 @@ pw_recent = 0
 pw_last   = 0
 
 repeat
-	pw_old = pw_recent
 	-- TODO: figure out unit of pulse width
-	pw_recent = get_usb_power(0) -- should return the pulse with, unit unknown
+	pw_recent = get_usb_power() -- should return the pulse with, unit unknown
 	
-	if (pw_recent ~= pw_last) then
-		print("pw_recent = " .. pw_recent)
+	if (pw_recent ~= 0 and pw_recent ~= pw_last) then
+		pw_last = pw_recent
+		print(pw_recent)
 	end
 	
+	--[[
 	if (pw_recent > treshold) then
 		-- print( "shutting down " )
 		shut_down()
@@ -27,6 +32,7 @@ repeat
 		shoot()
 		sleep(50)
 	end
+	]]--
 until (false)
 
 --[[
