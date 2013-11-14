@@ -1,8 +1,35 @@
 --[[
-@title VidUAV
-Example LUA code
+@title CD USB cmaera trigger
+
+FIXME: description 
 --]]
--- switch to autofocus mode, pre-focus, then go to manual focus mode
+
+treshold = 500
+pw_recent = 0
+pw_last   = 0
+
+repeat
+	pw_old = pw_recent
+	-- TODO: figure out unit of pulse width
+	pw_recent = get_usb_power(0) -- should return the pulse with, unit unknown
+	
+	if (pw_recent ~= pw_last) then
+		print("pw_recent = " .. pw_recent)
+	end
+	
+	if (pw_recent > treshold) then
+		-- print( "shutting down " )
+		shut_down()
+		sleep(1500)
+	end
+	
+	if (pw_recent < treshold) then
+		shoot()
+		sleep(50)
+	end
+until (false)
+
+--[[
 function pre_focus()
    local focused = false
    local try = 1
@@ -58,3 +85,5 @@ repeat
 	end
 until ( false )
 -- print( "VidUAV ended " )
+
+]]--
